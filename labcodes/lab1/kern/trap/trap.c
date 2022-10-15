@@ -26,6 +26,17 @@ static void print_ticks() {
  * be represented in relocation records.
  * */
 static struct gatedesc idt[256] = {{0}};
+#define SETGATE(gate, istrap, sel, off, dpl) {            \
+    (gate).gd_off_15_0 = (uint32_t)(off) & 0xffff;        \
+    (gate).gd_ss = (sel);                                \
+    (gate).gd_args = 0;                                    \
+    (gate).gd_rsv1 = 0;                                    \
+    (gate).gd_type = (istrap) ? STS_TG32 : STS_IG32;    \
+    (gate).gd_s = 0;                                    \
+    (gate).gd_dpl = (dpl);                                \
+    (gate).gd_p = 1;                                    \
+    (gate).gd_off_31_16 = (uint32_t)(off) >> 16;        \
+}
 
 static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
@@ -46,6 +57,13 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+      extern uintptr_t __vectors[]; 
+    int i;
+    for(i=0; i<sizeof(idt)/sizeof(struct gatedesc);i++){
+        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+    } 
+    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+    lidt(&idt_pd);
 }
 
 static const char *
@@ -147,6 +165,10 @@ trap_dispatch(struct trapframe *tf) {
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+        ticks++;
+        if(ticks%TICK_NUM==0){
+            print_ticks();
+        }
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();

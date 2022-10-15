@@ -302,5 +302,27 @@ print_stackframe(void) {
       *           NOTICE: the calling funciton's return addr eip  = ss:[ebp+4]
       *                   the calling funciton's ebp = ss:[ebp]
       */
+    uint32_t ebp=read_ebp();   //调用read ebp访问当前ebp的值，数据类型为32位。
+	uint32_t eip=read_eip();   //调用read eip访问eip的值，数据类型同。
+	int i;   //这里有个细节问题，就是不能for int i，这里面的C标准似乎不允许
+	for(i=0;i<STACKFRAME_DEPTH&&ebp!=0;i++)
+	{
+		//(3) from 0 .. STACKFRAME_DEPTH
+		cprintf("ebp:0x%08x eip:0x%08x ",ebp,eip);//(3.1)printf value of ebp, eip
+		for(int j=0;j<4;j++){
+            	cprintf("0x%08x ",((uint32_t*)ebp+2+j));
+        }
+		cprintf("\n");
+ 
+		//(3.2)(uint32_t)calling arguments [0..4] = the contents in address (unit32_t)ebp +2 [0..4]
+ 
+		//因为使用的是栈数据结构，因此可以直接根据ebp就能读取到各个栈帧的地址和值，ebp+4处为返回地址，ebp+8处为第一个参数值（最后一个入栈的参数值，对应32位系统），ebp-4处为第一个局部变量，ebp处为上一层 ebp 值。
+ 
+		//而这里，*代表指针，指针也是占用4个字节，因此可以直接对于指针加一，地址加4。
+ 
+		print_debuginfo(eip-1);	//打印eip以及ebp相关的信息
+		eip=*((uint32_t *)ebp+1);//此时eip指向了返回地址
+		ebp=*((uint32_t *)ebp+0);//ebp指向了原ebp的位置
+//最后更新ebp：ebp=ebp[0],更新eip：eip=ebp[1]，因为ebp[0]=ebp，ebp[1]=ebp[0]+4=eip。
+	}
 }
-
