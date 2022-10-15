@@ -1,0 +1,71 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.14.0-0-g155821a1990b-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+07F8F290+07EEF290 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..(THU.CST) os is loading ...
+
+Special kernel symbols:
+  entry  0x00100000 (phys)
+  etext  0x001036ea (phys)
+  edata  0x0010fa16 (phys)
+  end    0x00110d80 (phys)
+Kernel executable memory footprint: 68KB
+ebp:0x00007b38 eip:0x00100a9f 0x00007b40 0x00007b44 0x00007b48 0x00007b4c 
+    kern/debug/kdebug.c:306: print_stackframe+25
+ebp:0x00007b48 eip:0x00100dab 0x00007b50 0x00007b54 0x00007b58 0x00007b5c 
+    kern/debug/kmonitor.c:125: mon_backtrace+14
+ebp:0x00007b68 eip:0x00100088 0x00007b70 0x00007b74 0x00007b78 0x00007b7c 
+    kern/init/init.c:48: grade_backtrace2+23
+ebp:0x00007b88 eip:0x001000ae 0x00007b90 0x00007b94 0x00007b98 0x00007b9c 
+    kern/init/init.c:53: grade_backtrace1+31
+ebp:0x00007ba8 eip:0x001000cf 0x00007bb0 0x00007bb4 0x00007bb8 0x00007bbc 
+    kern/init/init.c:58: grade_backtrace0+23
+ebp:0x00007bc8 eip:0x001000f4 0x00007bd0 0x00007bd4 0x00007bd8 0x00007bdc 
+    kern/init/init.c:63: grade_backtrace+30
+ebp:0x00007be8 eip:0x00100050 0x00007bf0 0x00007bf4 0x00007bf8 0x00007bfc 
+    kern/init/init.c:28: kern_init+79
+ebp:0x00007bf8 eip:0x00007d76 0x00007c00 0x00007c04 0x00007c08 0x00007c0c 
+    <unknow>: -- 0x00007d75 --
+++ setup timer interrupts
+0: @ring 0
+0:  cs = 8
+0:  ds = 10
+0:  es = 10
+0:  ss = 10
++++ switch to  user  mode +++
+1: @ring 3
+1:  cs = 1b
+1:  ds = 23
+1:  es = 23
+1:  ss = 23
++++ switch to kernel mode +++
+2: @ring 0
+2:  cs = 8
+2:  ds = 10
+2:  es = 10
+2:  ss = 10
+100 ticks
+End of Test.
+kernel panic at kern/trap/trap.c:18:
+    EOT: kernel seems ok.
+stack trackback:
+ebp:0x00007af0 eip:0x00100a9f 0x00007af8 0x00007afc 0x00007b00 0x00007b04 
+    kern/debug/kdebug.c:306: print_stackframe+25
+ebp:0x00007b10 eip:0x00100460 0x00007b18 0x00007b1c 0x00007b20 0x00007b24 
+    kern/debug/panic.c:27: __panic+111
+ebp:0x00007b30 eip:0x0010192d 0x00007b38 0x00007b3c 0x00007b40 0x00007b44 
+    kern/trap/trap.c:0: print_ticks+63
+ebp:0x00007b60 eip:0x00101e2f 0x00007b68 0x00007b6c 0x00007b70 0x00007b74 
+    kern/trap/trap.c:164: trap_dispatch+154
+ebp:0x00007b80 eip:0x00101ff2 0x00007b88 0x00007b8c 0x00007b90 0x00007b94 
+    kern/trap/trap.c:223: trap+20
+ebp:0x00007be8 eip:0x00102a7e 0x00007bf0 0x00007bf4 0x00007bf8 0x00007bfc 
+    kern/trap/trapentry.S:24: <unknown>+0
+ebp:0x00007bf8 eip:0x00007d76 0x00007c00 0x00007c04 0x00007c08 0x00007c0c 
+    <unknow>: -- 0x00007d75 --
+Welcome to the kernel debug monitor!!
+Type 'help' for a list of commands.
+K> 

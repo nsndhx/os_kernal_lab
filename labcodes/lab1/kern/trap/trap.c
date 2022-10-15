@@ -26,6 +26,7 @@ static void print_ticks() {
  * be represented in relocation records.
  * */
 static struct gatedesc idt[256] = {{0}};
+
 #define SETGATE(gate, istrap, sel, off, dpl) {            \
     (gate).gd_off_15_0 = (uint32_t)(off) & 0xffff;        \
     (gate).gd_ss = (sel);                                \
@@ -37,6 +38,15 @@ static struct gatedesc idt[256] = {{0}};
     (gate).gd_p = 1;                                    \
     (gate).gd_off_31_16 = (uint32_t)(off) >> 16;        \
 }
+/*
+这个宏里面有四个参数：
+
+gate：中断描述符，
+istrap：是中断还是系统调用|区别在于eflag的if是否置位（期间是否允许中断）
+sel：表示段选择子
+off：偏移量（__vectors里面的内容）
+dpl：访问权限
+*/
 
 static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
@@ -57,12 +67,23 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
-      extern uintptr_t __vectors[]; 
+    extern uintptr_t __vectors[]; 
     int i;
     for(i=0; i<sizeof(idt)/sizeof(struct gatedesc);i++){
-        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+        //gate   idt[i]
+        // 我们的任务便是初始化中断描述符表，所以gate传入参数为idt
+        //istrap  0
+        //sel  GD_KTEXT
+        //off  __vectors[i]
+        //中断处理函数的段选择子及偏移量的设置要参考kern / trap / vectors.S文件：
+        //由该文件可知，所有中断向量的中断处理函数地址均保存在__vectors数组中，该数组中第i个元素对应第i个中断向量的中断处理函数地址。
+        //而且由文件开头可知，中断处理函数属于.text的内容。因此，中断处理函数的段选择子即.text的段选择子GD_KTEXT。
+        //从kern / mm / pmm.c可知.text的段基址为0，因此中断处理函数地址的偏移量等于其地址本身。
+        //dpl  DPL_KERNEL
+        // 除了T_SWITCH_TOK是DPL_USER其他都是DPL_KERNEL。
+        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);//初始化idt
     } 
-    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);//因为在发生中断时候，我们需要从用户态切换到内核态，所以得留个口让用户态进来
     lidt(&idt_pd);
 }
 
