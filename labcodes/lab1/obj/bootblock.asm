@@ -178,7 +178,7 @@ inb(uint16_t port) {
     7c9c:	73 6a                	jae    7d08 <readseg+0x96>
     7c9e:	89 da                	mov    %ebx,%edx
     7ca0:	ec                   	in     (%dx),%al
-    while ((inb(0x1F7) & 0xC0) != 0x40)
+    while ((inb(0x1F7) & 0xC0) != 0x40)//0号硬盘状态寄存器,不断查询读0x1F7寄存器的最高两位，直到最高位为0、次高位为1（这个状态应该意味着磁盘空闲）才返回
     7ca1:	24 c0                	and    $0xc0,%al
     7ca3:	3c 40                	cmp    $0x40,%al
     7ca5:	75 f7                	jne    7c9e <readseg+0x2c>
@@ -194,17 +194,17 @@ outb(uint16_t port, uint8_t data) {
     7caf:	ba f3 01 00 00       	mov    $0x1f3,%edx
     7cb4:	8a 45 f0             	mov    -0x10(%ebp),%al
     7cb7:	ee                   	out    %al,(%dx)
-    outb(0x1F4, (secno >> 8) & 0xFF);
+    outb(0x1F4, (secno >> 8) & 0xFF);//0号硬盘柱面（低字节）
     7cb8:	8b 45 f0             	mov    -0x10(%ebp),%eax
     7cbb:	ba f4 01 00 00       	mov    $0x1f4,%edx
     7cc0:	c1 e8 08             	shr    $0x8,%eax
     7cc3:	ee                   	out    %al,(%dx)
-    outb(0x1F5, (secno >> 16) & 0xFF);
+    outb(0x1F5, (secno >> 16) & 0xFF);//0号硬盘柱面（高字节）
     7cc4:	8b 45 f0             	mov    -0x10(%ebp),%eax
     7cc7:	ba f5 01 00 00       	mov    $0x1f5,%edx
     7ccc:	c1 e8 10             	shr    $0x10,%eax
     7ccf:	ee                   	out    %al,(%dx)
-    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);
+    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);//0号硬盘驱动器/磁头寄存器
     7cd0:	8b 45 f0             	mov    -0x10(%ebp),%eax
     7cd3:	ba f6 01 00 00       	mov    $0x1f6,%edx
     7cd8:	c1 e8 18             	shr    $0x18,%eax
@@ -217,7 +217,7 @@ outb(uint16_t port, uint8_t data) {
     asm volatile ("inb %1, %0" : "=a" (data) : "d" (port));
     7ce5:	89 da                	mov    %ebx,%edx
     7ce7:	ec                   	in     (%dx),%al
-    while ((inb(0x1F7) & 0xC0) != 0x40)
+    while ((inb(0x1F7) & 0xC0) != 0x40)//0号硬盘状态寄存器,不断查询读0x1F7寄存器的最高两位，直到最高位为0、次高位为1（这个状态应该意味着磁盘空闲）才返回
     7ce8:	24 c0                	and    $0xc0,%al
     7cea:	3c 40                	cmp    $0x40,%al
     7cec:	75 f7                	jne    7ce5 <readseg+0x73>
@@ -250,19 +250,19 @@ bootmain(void) {
     7d0f:	f3 0f 1e fb          	endbr32 
     7d13:	55                   	push   %ebp
     // read the 1st page off disk
-    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);//读取bin/kernel文件的ELF Header信息
     7d14:	31 c9                	xor    %ecx,%ecx
 bootmain(void) {
     7d16:	89 e5                	mov    %esp,%ebp
-    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);//读取bin/kernel文件的ELF Header信息
     7d18:	ba 00 10 00 00       	mov    $0x1000,%edx
 bootmain(void) {
     7d1d:	56                   	push   %esi
-    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);//读取bin/kernel文件的ELF Header信息
     7d1e:	b8 00 00 01 00       	mov    $0x10000,%eax
 bootmain(void) {
     7d23:	53                   	push   %ebx
-    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);//读取bin/kernel文件的ELF Header信息
     7d24:	e8 49 ff ff ff       	call   7c72 <readseg>
 
     // is this a valid ELF?
