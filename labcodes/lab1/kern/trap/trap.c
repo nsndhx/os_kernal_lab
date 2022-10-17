@@ -179,7 +179,7 @@ trap_dispatch(struct trapframe *tf) {
     char c;
 
     switch (tf->tf_trapno) {
-    case IRQ_OFFSET + IRQ_TIMER:
+    case IRQ_OFFSET + IRQ_TIMER://若中断号是IRQ_OFFSET + IRQ_TIMER 为时钟中断，则把ticks 将增加一
         /* LAB1 YOUR CODE : STEP 3 */
         /* handle the timer interrupt */
         /* (1) After a timer interrupt, you should record this event using a global variable (increase it), such as ticks in kern/driver/clock.c
@@ -191,18 +191,32 @@ trap_dispatch(struct trapframe *tf) {
             print_ticks();
         }
         break;
-    case IRQ_OFFSET + IRQ_COM1:
+    case IRQ_OFFSET + IRQ_COM1://若中断号是IRQ_OFFSET + IRQ_COM1 为串口中断，则显示收到的字符
         c = cons_getc();
         cprintf("serial [%03d] %c\n", c, c);
         break;
-    case IRQ_OFFSET + IRQ_KBD:
+    case IRQ_OFFSET + IRQ_KBD://若中断号是IRQ_OFFSET + IRQ_KBD 为 键盘中断，则显示收到的字符
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
-    case T_SWITCH_TOU:
-    case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+    //tf trapframe  栈帧结构体
+    case T_SWITCH_TOU://内核→用户
+        //panic("T_SWITCH_USER ??\n");
+    	if (tf->tf_cs != USER_CS) {
+            tf->tf_cs = USER_CS;
+            tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+            tf->tf_esp += 4;
+            tf->tf_eflags |= FL_IOPL_MASK;
+        }
+        break;
+    case T_SWITCH_TOK://用户→内核
+        //panic("T_SWITCH_KERNEL ??\n");
+        if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
