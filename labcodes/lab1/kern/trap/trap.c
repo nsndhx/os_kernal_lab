@@ -71,6 +71,7 @@ idt_init(void) {
     int i;
     for(i=0; i<sizeof(idt)/sizeof(struct gatedesc);i++){
         //gate   idt[i]
+        // idt 中断描述符表，和GDT类似，他记录了0~255的中断号和调用函数之间的关系
         // 我们的任务便是初始化中断描述符表，所以gate传入参数为idt
         //istrap  0
         //sel  GD_KTEXT

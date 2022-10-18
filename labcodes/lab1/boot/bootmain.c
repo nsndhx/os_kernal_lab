@@ -45,6 +45,10 @@ static void
 readsect(void *dst, uint32_t secno) {
     // wait for disk to be ready
     waitdisk();
+    //inb 从I/O端口读取一个字节(BYTE, HALF-WORD) ;
+    //outb 向I/O端口写入一个字节（BYTE, HALF-WORD）;
+    //inw 从I/O端口读取一个字（WORD，即两个字节）;
+    //outw 向I/O端口写入一个字（WORD，即两个字节）
     // 发出读取扇区的命令：用LBA模式的PIO（Program IO）方式来访问硬盘
     outb(0x1F2, 1); //0号硬盘数据扇区计数                        // count = 1,设置读取扇区的数目为1
     outb(0x1F3, secno & 0xFF);//0号硬盘扇区数

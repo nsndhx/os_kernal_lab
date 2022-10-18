@@ -9,7 +9,7 @@ Booting from Hard Disk..(THU.CST) os is loading ...
 
 Special kernel symbols:
   entry  0x00100000 (phys)
-  etext  0x00103696 (phys)
+  etext  0x001036a5 (phys)
   edata  0x0010fa16 (phys)
   end    0x00110d20 (phys)
 Kernel executable memory footprint: 68KB
@@ -59,12 +59,13 @@ ebp:0x00007b00 eip:0x0010046b 0x00007b08 0x00007b0c 0x00007b10 0x00007b14
 ebp:0x00007b20 eip:0x0010193a 0x00007b28 0x00007b2c 0x00007b30 0x00007b34 
     kern/trap/trap.c:0: print_ticks+69
 ebp:0x00007b50 eip:0x00101e14 0x00007b58 0x00007b5c 0x00007b60 0x00007b64 
-    kern/trap/trap.c:191: trap_dispatch+163
-ebp:0x00007b70 eip:0x00101f56 0x00007b78 0x00007b7c 0x00007b80 0x00007b84 
-    kern/trap/trap.c:242: trap+20
-ebp:0x00007be8 eip:0x001029e1 0x00007bf0 0x00007bf4 0x00007bf8 0x00007bfc 
+    kern/trap/trap.c:192: trap_dispatch+163
+ebp:0x00007b70 eip:0x00101f65 0x00007b78 0x00007b7c 0x00007b80 0x00007b84 
+    kern/trap/trap.c:243: trap+20
+ebp:0x00007be8 eip:0x001029f0 0x00007bf0 0x00007bf4 0x00007bf8 0x00007bfc 
     kern/trap/trapentry.S:24: <unknown>+0
 ebp:0x00007bf8 eip:0x00007d74 0x00007c00 0x00007c04 0x00007c08 0x00007c0c 
     <unknow>: -- 0x00007d73 --
 Welcome to the kernel debug monitor!!
 Type 'help' for a list of commands.
+K> 
