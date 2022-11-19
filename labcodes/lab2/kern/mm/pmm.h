@@ -11,15 +11,15 @@
 // only needs to implement the methods in pmm_manager class, then XXX_pmm_manager can be used
 // by ucore to manage the total physical memory space.
 struct pmm_manager {
-    const char *name;                                 // XXX_pmm_manager's name
-    void (*init)(void);                               // initialize internal description&management data structure
+    const char *name;                                 // XXX_pmm_manager's name某种物理内存管理器的名称（可根据算法等具体实现的不同自定义新的内存管理器)
+    void (*init)(void);                               // initialize internal description&management data structure物理内存管理器初始化，包括生成内部描述和数据结构（空闲块链表和空闲页总数）s
                                                       // (free block list, number of free block) of XXX_pmm_manager 
-    void (*init_memmap)(struct Page *base, size_t n); // setup description&management data structcure according to
+    void (*init_memmap)(struct Page *base, size_t n); // setup description&management data structcure according to初始化空闲页，根据初始时的空闲物理内存区域将页映射到物理内存上
                                                       // the initial free physical memory space 
-    struct Page *(*alloc_pages)(size_t n);            // allocate >=n pages, depend on the allocation algorithm 
-    void (*free_pages)(struct Page *base, size_t n);  // free >=n pages with "base" addr of Page descriptor structures(memlayout.h)
-    size_t (*nr_free_pages)(void);                    // return the number of free pages 
-    void (*check)(void);                              // check the correctness of XXX_pmm_manager 
+    struct Page *(*alloc_pages)(size_t n);            // allocate >=n pages, depend on the allocation algorithm 申请分配指定数量的物理页
+    void (*free_pages)(struct Page *base, size_t n);  // free >=n pages with "base" addr of Page descriptor structures(memlayout.h)申请释放若干指定物理页
+    size_t (*nr_free_pages)(void);                    // return the number of free pages 查询当前空闲页总数
+    void (*check)(void);                              // check the correctness of XXX_pmm_manager 检查物理内存管理器的正确性
 };
 
 extern const struct pmm_manager *pmm_manager;

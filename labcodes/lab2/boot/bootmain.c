@@ -36,7 +36,7 @@
 /* waitdisk - wait for disk ready */
 static void
 waitdisk(void) {
-    while ((inb(0x1F7) & 0xC0) != 0x40)
+    while ((inb(0x1F7) & 0xC0) != 0x40)//0号硬盘状态寄存器,不断查询读0x1F7寄存器的最高两位，直到最高位为0、次高位为1（这个状态应该意味着磁盘空闲）才返回
         /* do nothing */;
 }
 
@@ -45,19 +45,23 @@ static void
 readsect(void *dst, uint32_t secno) {
     // wait for disk to be ready
     waitdisk();
-
-    outb(0x1F2, 1);                         // count = 1
-    outb(0x1F3, secno & 0xFF);
-    outb(0x1F4, (secno >> 8) & 0xFF);
-    outb(0x1F5, (secno >> 16) & 0xFF);
-    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);
-    outb(0x1F7, 0x20);                      // cmd 0x20 - read sectors
+    //inb 从I/O端口读取一个字节(BYTE, HALF-WORD) ;
+    //outb 向I/O端口写入一个字节（BYTE, HALF-WORD）;
+    //inw 从I/O端口读取一个字（WORD，即两个字节）;
+    //outw 向I/O端口写入一个字（WORD，即两个字节）
+    // 发出读取扇区的命令：用LBA模式的PIO（Program IO）方式来访问硬盘
+    outb(0x1F2, 1); //0号硬盘数据扇区计数                        // count = 1,设置读取扇区的数目为1
+    outb(0x1F3, secno & 0xFF);//0号硬盘扇区数
+    outb(0x1F4, (secno >> 8) & 0xFF);//0号硬盘柱面（低字节）
+    outb(0x1F5, (secno >> 16) & 0xFF);//0号硬盘柱面（高字节）
+    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);//0号硬盘驱动器/磁头寄存器
+    outb(0x1F7, 0x20);//0 号硬盘命令寄存器                      // cmd 0x20 - read sectors
 
     // wait for disk to be ready
     waitdisk();
 
-    // read a sector
-    insl(0x1F0, dst, SECTSIZE / 4);
+    // read a sector,读一个扇区
+    insl(0x1F0, dst, SECTSIZE / 4);//读取到dst位置，除以4是因为这里以DW为单位
 }
 
 /* *
@@ -86,7 +90,7 @@ readseg(uintptr_t va, uint32_t count, uint32_t offset) {
 void
 bootmain(void) {
     // read the 1st page off disk
-    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);//读取bin/kernel文件的ELF Header信息
 
     // is this a valid ELF?
     if (ELFHDR->e_magic != ELF_MAGIC) {
