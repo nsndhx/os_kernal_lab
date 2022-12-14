@@ -98,6 +98,11 @@ struct e820map {
  * that convert Page to other data types, such as phyical address.
  * */
 struct Page {
+/*ref:注释中可以翻译为“引用的计数器”，这样可能比较抽象。具体的说ref表示的是，这个页被页表的引用记数，也就是映射此物理页的虚拟页个数。如果这个页被页表引用了即在某页表中有一个页表项设置了一个虚拟页到这个Page管理的物理页的映射关系，就会把Page的ref加一；反之，若页表项取消，即映射关系解除，就会把Page的ref减一。
+flags：此物理页的状态标记，有两个标志位状态，为1的时候，代表这一页是free状态，可以被分配，但不能对它进行释放；如果为0，那么说明这个页已经分配了，不能被分配，但是可以被释放掉。简单地说，就是可不可以被分配的一个标志位。
+propert：记录某连续空闲页的数量，这里需要注意的是用到此成员变量的这个Page一定是连续内存块的开始地址（第一页的地址）。
+page_link：便于把多个连续内存空闲块链接在一起的双向链表指针，连续内存空闲块利用这个页的成员变量page_link来链接比它地址小和大的其他连续内存空闲块，释放的时候只要将这个空间通过指针放回到双向链表中。
+*/
     int ref;                        // page frame's reference counter
     uint32_t flags;                 // array of flags that describe the status of the page frame
     unsigned int property;          // the num of free block, used in first fit pm manager
@@ -121,7 +126,9 @@ struct Page {
 #define le2page(le, member)                 \
     to_struct((le), struct Page, member)
 
-/* free_area_t - maintains a doubly linked list to record free (unused) pages */
+/* free_area_t - maintains a doubly linked list to record free (unused) pages 
+这里是由于随着内存的分配，导致出现了小的连续空闲内存即外部碎片。但是，我们应该利用这些小的连续空闲内存，但是每次的遍历带来的消耗不值得。所以这里定义了free_area_t的数据结构。
+*/
 typedef struct {
     list_entry_t free_list;         // the list header
     unsigned int nr_free;           // # of free pages in this free list

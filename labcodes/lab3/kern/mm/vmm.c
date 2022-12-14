@@ -304,33 +304,66 @@ volatile unsigned int pgfault_num=0;
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     int ret = -E_INVAL;
-    //try to find a vma which include addr
+    //对虚拟地址进行判断，
+    //如果虚拟地址的范围超过了限制，
+    //或者是虚拟地址无法被查找到，
+    //即可以说该地址是不合法的，进行了一次非法访问，那么可以直接报错。
+
+    //try to find a vma which include addr尝试寻找包括addr的vma
+    //试图从mm关联的vma链表块中查询，是否存在当前addr线性地址匹配的vma块
     struct vma_struct *vma = find_vma(mm, addr);
 
+    // 全局页异常处理数自增1
     pgfault_num++;
-    //If the addr is in the range of a mm's vma?
+    //If the addr is in the range of a mm's vma?判断addr是否在vma的范围中
     if (vma == NULL || vma->vm_start > addr) {
+        // 如果没有匹配到vma
         cprintf("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
+
     //check the error_code
+    //错误码的低2位分别是：
+    //P标志（位0）最低位：
+    //表示当前的错误是由于不存在页面（0）引起，还是由于违反访问权限（1）引起。
+    //W / R标志（位1）：
+    //表示当前错误是由于读操作（0）引起还是还是写操作（1）引起。
+
+    // 页访问异常错误码有32位。
+    //位0为1 表示对应物理页不存在；
+    //位1为1 表示写异常(比如写了只读页)；
+    //位2为1 表示访问权限异常（比如用户态程序访问内核空间的数据）
+    // 对3求模，主要判断bit0、bit1的值
     switch (error_code & 3) {
     default:
             /* error code flag : default is 3 ( W/R=1, P=1): write, present */
+            // bit0，bit1都为1，访问的映射页表项存在，且发生的是写异常.
+            //说明发生了缺页异常
     case 2: /* error code flag : (W/R=1, P=0): write, not present */
+    //申请写操作，物理内存中不存在，并且对应地址的内容不允许写
+    //bit0为0，bit1为1，访问的映射页表项不存在、且发生的是写异常
         if (!(vma->vm_flags & VM_WRITE)) {
+            // 对应的vma块映射的虚拟内存空间是不可写的,权限校验失败
             cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
-            goto failed;
+           // 跳转failed直接返回
+           goto failed;
         }
+        // 校验通过，则说明发生了缺页异常
         break;
     case 1: /* error code flag : (W/R=0, P=1): read, present */
+    //申请读操作，并且物理内存中存在（因此已经报错，所以是权限不够）
+    //bit0为1，bit1为0，访问的映射页表项存在，且发生的是读异常(可能是访问权限异常)
         cprintf("do_pgfault failed: error code flag = read AND present\n");
         goto failed;
     case 0: /* error code flag : (W/R=0, P=0): read, not present */
+    //申请读操作但是物理内存中不存在，并且该地址数据不允许被读或者加载
+    //bit0为0，bit1为0，访问的映射页表项不存在，且发生的是读异常
         if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {
+            //对应的vma映射的虚拟内存空间是不可读且不可执行的
             cprintf("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
             goto failed;
         }
+        //校验通过，则说明发生了缺页异常
     }
     /* IF (write an existed addr ) OR
      *    (write an non_existed addr && addr is writable) OR
@@ -338,14 +371,17 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
      * THEN
      *    continue process
      */
-    uint32_t perm = PTE_U;
+     //构造需要设置的缺页页表项的perm权限
+    uint32_t perm = PTE_U;//prem:给物理页赋予权限的中间变量
     if (vma->vm_flags & VM_WRITE) {
         perm |= PTE_W;
     }
+    //构造需要设置的缺页页表项的线性地址(按照PGSIZE向下取整，进行页面对齐)
     addr = ROUNDDOWN(addr, PGSIZE);
 
     ret = -E_NO_MEM;
 
+    //用于映射的页表项指针（page table entry, pte）
     pte_t *ptep=NULL;
     /*LAB3 EXERCISE 1: YOUR CODE
     * Maybe you want help comment, BELOW comments can help you finish the code
@@ -364,12 +400,24 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     *   mm->pgdir : the PDT of these vma
     *
     */
-#if 0
+//#if 0
     /*LAB3 EXERCISE 1: YOUR CODE*/
-    ptep = ???              //(1) try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
+    //(1) try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
+    //(notice the 3th parameter '1')
+    //获取addr线性地址在mm所关联页表中的页表项
+    //第三个参数=1 表示如果对应页表项不存在，则需要新创建这个页表项
+    if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
+        cprintf("get_pte in do_pgfault failed\n");
+        goto failed;
+    }             
+    //(2) if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
+    //如果对应页表项的内容每一位都全为0，说明之前并不存在，需要设置对应的数据，进行线性地址与物理地址的映射
     if (*ptep == 0) {
-                            //(2) if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
-
+        //令pgdir指向的页表中，la线性地址对应的二级页表项与一个新分配的物理页Page进行虚实地址的映射                  
+        if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
+            cprintf("pgdir_alloc_page in do_pgfault failed\n");
+            goto failed;
+        }
     }
     else {
     /*LAB3 EXERCISE 2: YOUR CODE
@@ -383,20 +431,35 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     *    page_insert ： build the map of phy addr of an Page with the linear addr la
     *    swap_map_swappable ： set the page swappable
     */
+        // 如果不是全为0，说明可能是之前被交换到了swap磁盘中
         if(swap_init_ok) {
+            // 如果开启了swap磁盘虚拟内存交换机制
             struct Page *page=NULL;
-                                    //(1）According to the mm AND addr, try to load the content of right disk page
-                                    //    into the memory which page managed.
-                                    //(2) According to the mm, addr AND page, setup the map of phy addr <---> logical addr
-                                    //(3) make the page swappable.
+            //(1）According to the mm AND addr, try to load the content of right disk page
+            //    into the memory which page managed.
+            // 将addr线性地址对应的物理页数据从磁盘交换到物理内存中(令Page指针指向交换成功后的物理页)
+            if ((ret = swap_in(mm, addr, &page)) != 0) {    
+                // swap_in返回值不为0，表示换入失败          
+                cprintf("swap_in in do_pgfault failed\n");
+                goto failed;
+            }       
+            //(2) According to the mm, addr AND page, setup the map of phy addr <---> logical addr
+            // 将交换进来的page页与mm->padir页表中对应addr的二级页表项建立映射关系(perm标识这个二级页表的各个权限位)                             
+            page_insert(mm->pgdir, page, addr, perm);   
+            //(3) make the page swappable.
+            // 当前page是为可交换的，将其加入全局虚拟内存交换管理器的管理
+            swap_map_swappable(mm, addr, page, 1);          
+            page->pra_vaddr = addr;
         }
         else {
+            // 如果没有开启swap磁盘虚拟内存交换机制，但是却执行至此，则出现了问题
             cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
         }
-   }
-#endif
-   ret = 0;
+    }
+//#endif
+    // 返回0代表缺页异常处理成功
+    ret = 0;
 failed:
     return ret;
 }

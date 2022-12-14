@@ -48,6 +48,25 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+    extern uintptr_t __vectors[]; 
+    int i;
+    for(i=0; i<sizeof(idt)/sizeof(struct gatedesc);i++){
+        //gate   idt[i]
+        // idt 中断描述符表，和GDT类似，他记录了0~255的中断号和调用函数之间的关系
+        // 我们的任务便是初始化中断描述符表，所以gate传入参数为idt
+        //istrap  0
+        //sel  GD_KTEXT
+        //off  __vectors[i]
+        //中断处理函数的段选择子及偏移量的设置要参考kern / trap / vectors.S文件：
+        //由该文件可知，所有中断向量的中断处理函数地址均保存在__vectors数组中，该数组中第i个元素对应第i个中断向量的中断处理函数地址。
+        //而且由文件开头可知，中断处理函数属于.text的内容。因此，中断处理函数的段选择子即.text的段选择子GD_KTEXT。
+        //从kern / mm / pmm.c可知.text的段基址为0，因此中断处理函数地址的偏移量等于其地址本身。
+        //dpl  DPL_KERNEL
+        // 除了T_SWITCH_TOK是DPL_USER其他都是DPL_KERNEL。
+        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);//初始化idt
+    } 
+    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);//因为在发生中断时候，我们需要从用户态切换到内核态，所以得留个口让用户态进来
+    lidt(&idt_pd);
 }
 
 static const char *
@@ -169,36 +188,44 @@ trap_dispatch(struct trapframe *tf) {
     int ret;
 
     switch (tf->tf_trapno) {
-    case T_PGFLT:  //page fault
-        if ((ret = pgfault_handler(tf)) != 0) {
-            print_trapframe(tf);
-            panic("handle pgfault failed. %e\n", ret);
-        }
-        break;
-    case IRQ_OFFSET + IRQ_TIMER:
-#if 0
-    LAB3 : If some page replacement algorithm(such as CLOCK PRA) need tick to change the priority of pages, 
-    then you can add code here. 
-#endif
+    case IRQ_OFFSET + IRQ_TIMER://若中断号是IRQ_OFFSET + IRQ_TIMER 为时钟中断，则把ticks 将增加一
         /* LAB1 YOUR CODE : STEP 3 */
         /* handle the timer interrupt */
         /* (1) After a timer interrupt, you should record this event using a global variable (increase it), such as ticks in kern/driver/clock.c
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+        ticks++;
+        if(ticks%TICK_NUM==0){
+            print_ticks();
+        }
         break;
-    case IRQ_OFFSET + IRQ_COM1:
+    case IRQ_OFFSET + IRQ_COM1://若中断号是IRQ_OFFSET + IRQ_COM1 为串口中断，则显示收到的字符
         c = cons_getc();
         cprintf("serial [%03d] %c\n", c, c);
         break;
-    case IRQ_OFFSET + IRQ_KBD:
+    case IRQ_OFFSET + IRQ_KBD://若中断号是IRQ_OFFSET + IRQ_KBD 为 键盘中断，则显示收到的字符
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
-    case T_SWITCH_TOU:
-    case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+    //tf trapframe  栈帧结构体
+    case T_SWITCH_TOU://内核→用户
+        //panic("T_SWITCH_USER ??\n");
+    	if (tf->tf_cs != USER_CS) {
+            tf->tf_cs = USER_CS;
+            tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+            tf->tf_esp += 4;
+            tf->tf_eflags |= FL_IOPL_MASK;
+        }
+        break;
+    case T_SWITCH_TOK://用户→内核
+        //panic("T_SWITCH_KERNEL ??\n");
+        if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
